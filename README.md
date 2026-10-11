@@ -1,23 +1,27 @@
 # Checkpoint
 
-**A pre-action guard for AI agents.** Before your agent pays, deletes, emails or submits anything, Checkpoint answers in ~100 ms: **allow**, **block**, or **ask a human** (approve/deny from Telegram).
+**A pre-action guard for AI agents.** Before your agent pays, deletes, emails or submits anything, Checkpoint answers in about half a second: **allow**, **block**, or **ask a human** (approve/deny from Telegram).
 
 ```ts
 const refund = cp.guard("stripe.refund", stripeRefund);
 await refund({ amount: 5000, customer: "cus_123" });
-// → throws CheckpointBlocked: "Possible violation (97%): Never send, transfer or spend money without explicit human approval."
+// → throws CheckpointBlocked: "Blocked: Moves money (97%)"
 ```
 
-Works with any agent framework and any LLM provider. Rules are plain English. Every decision is logged.
+Works with any agent framework and any LLM provider. Policies are plain English. Every decision is logged.
+
+On the bundled calibration set (`examples/calibrate.py`), 13 of 13 test actions got the expected decision on the live model: transfers, charges, refunds and destructive queries blocked; refund and discount promises sent for approval; routine reads and searches allowed.
 
 ## How it works
 
 1. Your agent proposes an action (`tool`, `input`, optional `description`).
-2. The Worker asks a **decision model** (default: Cloudflare `@cf/cloudflare/clef` on Workers AI) one yes/no question per rule, plus "is this irreversible / high impact?".
-3. The highest violation probability decides:
-   - `≥ 0.85` → **block**
-   - `≥ 0.50` → **ask** (Telegram message with Approve / Deny buttons)
-   - otherwise → **allow** (high-impact actions with moderate risk are escalated to **ask**)
+2. The Worker asks a **decision model** (default: Cloudflare `@cf/cloudflare/clef` on Workers AI) one yes/no question per policy, for example *"Executing this action sends or refunds money right now"*, plus *"is this irreversible / high impact?"*.
+3. Each policy says what happens when it is true:
+   - a **block** policy that is ≥ 50% likely → **block**; 30–50% → **ask**
+   - an **ask** policy that is ≥ 50% likely → **ask** (Telegram message with Approve / Deny buttons)
+   - nothing matched → **allow** (high-impact actions with a moderate signal are escalated to **ask**)
+   
+   The most severe outcome wins. End-to-end latency in our tests was 0.4–0.6 s, including the audit-log write.
 4. If the model is down or returns something unparseable, Checkpoint **fails closed** (`ask`) by default. Set `FAIL_MODE=open` to allow instead.
 
 ## Repo layout
