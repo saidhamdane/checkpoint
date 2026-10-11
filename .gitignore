@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.wrangler/
+__pycache__/
+worker/wrangler.toml
+.env
+*.key
+checkpoint_key.txt

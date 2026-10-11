@@ -1,0 +1,23 @@
+name = "checkpoint"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[ai]
+binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "checkpoint-db"
+database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+
+[vars]
+DECISION_MODEL = "@cf/cloudflare/clef"
+FAIL_MODE = "closed"
+APPROVAL_TTL_SECONDS = "900"
+TELEGRAM_CHAT_ID = ""
+
+# Secrets (set with `npx wrangler secret put NAME`):
+#   API_KEYS                 comma-separated client keys
+#   TELEGRAM_BOT_TOKEN       optional
+#   TELEGRAM_WEBHOOK_SECRET  optional
+#   DECISION_URL / DECISION_API_KEY  optional, for a System One compatible provider instead of Workers AI

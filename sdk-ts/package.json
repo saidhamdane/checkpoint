@@ -1,0 +1,12 @@
+{
+  "name": "@checkpoint-ai/sdk",
+  "version": "0.1.0",
+  "description": "Pre-action guard for AI agents: allow, block or ask a human before any tool call.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": { "build": "tsc" },
+  "license": "MIT",
+  "devDependencies": { "typescript": "^5.6.0" }
+}
