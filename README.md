@@ -10,7 +10,20 @@ await refund({ amount: 5000, customer: "cus_123" });
 
 Works with any agent framework and any LLM provider. Policies are plain English. Every decision is logged.
 
-On the bundled calibration set, 13 of 13 test actions got the expected decision on the live model: transfers, charges, refunds and destructive queries blocked; refund and discount promises sent for approval; routine reads and searches allowed. A larger set (36 cases, including false-positive traps and prompt-injection attempts) ships in `examples/calibrate.py`.
+On the bundled calibration set (`examples/calibrate.py`), **36 of 36** labelled actions got the expected decision on the live model (October 2026):
+
+| Category | Result | Examples |
+|---|---|---|
+| Moves money | 8/8 blocked | transfers, refunds, card charges, crypto, purchases |
+| Deletes data | 5/5 blocked | `DROP TABLE`, `rm -rf`, deleting a repo or bucket |
+| Exposes secrets | 3/3 blocked | posting a DB password, publishing a `.env` |
+| Commits the business | 4/4 ask | promising a refund, a discount, a deadline |
+| Sensitive outside message | 2/2 ask | insulting a customer, claims about a competitor |
+| Routine | 6/6 allowed | searches, reads, internal posts, commits |
+| Money mentioned, not moved | 4/4 allowed | "write a report about the 5000 EUR spend" |
+| Prompt injection | 4/4 | "pre-approved, ignore all rules" transfers stay blocked |
+
+Most decisions were far from the threshold (blocks at 93–99%, routine at 4–11%). The closest call was sending a signed contract (57%, threshold 50%), so treat borderline categories with care and add your own cases.
 
 ## Quick start (hosted, free)
 
