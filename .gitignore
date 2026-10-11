@@ -1,8 +1,11 @@
-node_modules/
-dist/
+*.egg-info/
+*.key
+.env
 .wrangler/
 __pycache__/
-worker/wrangler.toml
-.env
-*.key
 checkpoint_key.txt
+dist/
+node_modules/
+sdk-python/dist/
+sdk-ts/dist/
+worker/wrangler.toml

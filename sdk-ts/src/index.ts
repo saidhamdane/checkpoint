@@ -24,13 +24,18 @@ export interface CheckInput {
   input?: unknown;
   description?: string;
   context?: string;
+  /** Compute and log the decision without sending an approval request. */
+  dryRun?: boolean;
 }
+
+/** A fact about the action and what to do when it is true. Plain strings ("Never do X.") also work. */
+export type Policy = string | { rule: string; action: "block" | "ask"; label?: string };
 
 export interface CheckpointOptions {
   apiKey: string;
   baseUrl: string;
   agentId?: string;
-  policies?: string[];
+  policies?: Policy[];
   thresholds?: { block?: number; ask?: number };
   /** How long guard() waits for a human approval before giving up. Default 10 min. */
   approvalTimeoutMs?: number;
@@ -74,6 +79,7 @@ export class Checkpoint {
         agent_id: this.opts.agentId,
         policies: this.opts.policies,
         thresholds: this.opts.thresholds,
+        ...(action.dryRun ? { dry_run: true } : {}),
       }),
     });
     if (!res.ok) throw new Error(`Checkpoint HTTP ${res.status}: ${await res.text()}`);

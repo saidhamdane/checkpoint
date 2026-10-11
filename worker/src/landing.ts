@@ -83,6 +83,13 @@ form.wait{display:flex;flex-wrap:wrap;gap:12px;max-width:560px}
 form.wait input[type=email]{flex:1 1 260px;font:inherit;padding:14px 16px;border-radius:12px;border:2px solid var(--ink);background:#fff;color:var(--ink)}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 #msg{margin:14px 0 0;font-size:16px;min-height:1.5em}
+.keybox{max-width:640px;background:#fff;border:2px solid var(--ink);border-radius:16px;padding:20px;margin-top:8px}
+.keybox p{margin:0 0 12px}
+.keyrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.keyrow code{flex:1 1 260px;min-width:0;overflow-wrap:anywhere;font:15px/1.4 "JetBrains Mono",monospace;background:var(--paper);padding:12px;border-radius:10px}
+.btn.small{padding:10px 16px}
+.next{margin:16px 0 0;padding-left:20px}
+.next li{margin:6px 0}
 #msg.ok{color:#127368}#msg.err{color:#B01E31}
 
 footer{padding:40px 0 60px;color:var(--steel);font-size:15px;border-top:1px solid var(--line)}
@@ -105,7 +112,7 @@ footer{padding:40px 0 60px;color:var(--steel);font-size:15px;border-top:1px soli
 <div class="wrap">
   <header class="top">
     <a class="mark" href="/" aria-label="Checkpoint home"><i aria-hidden="true"><b style="background:var(--stop)"></b><b style="background:var(--wait)"></b><b style="background:var(--go)"></b></i>Checkpoint</a>
-    <nav><a href="#how">How it works</a><a href="#start">Get started</a><a class="gh" href="https://github.com/saidhamdane/checkpoint">GitHub</a></nav>
+    <nav><a href="#how">How it works</a><a href="#start">Get started</a><a href="/app">Dashboard</a><a class="gh" href="https://github.com/saidhamdane/checkpoint">GitHub</a></nav>
   </header>
 
   <main>
@@ -114,7 +121,7 @@ footer{padding:40px 0 60px;color:var(--steel);font-size:15px;border-top:1px soli
       <h1>Your agent asks before it acts.</h1>
       <p class="lede">Checkpoint checks every risky action an AI agent is about to take, like a payment, a deletion or an email to a customer. It allows it, blocks it, or sends it to your phone for a yes or no.</p>
       <div class="cta">
-        <a class="btn" href="#start">Get early access</a>
+        <a class="btn" href="#start">Get a free API key</a>
         <a class="btn ghost" href="https://github.com/saidhamdane/checkpoint">View the code</a>
       </div>
     </div>
@@ -177,13 +184,22 @@ await refund({ amount: 900, customer: "cus_123" });
     </div>
 
     <h2 class="h" style="margin-top:64px">Get an API key</h2>
-    <p class="sub">Checkpoint is in early access. Leave your email and you will get a key and setup help.</p>
+    <p class="sub">Free for up to 10,000 checks a month. Your key appears right here.</p>
     <form class="wait" id="wait" novalidate>
       <label for="email" class="hp">Email</label>
       <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@company.com" aria-describedby="msg">
       <div class="hp" aria-hidden="true"><label>Company website<input name="website" tabindex="-1" autocomplete="off"></label></div>
-      <button class="btn" type="submit">Request a key</button>
+      <button class="btn" type="submit">Create my key</button>
     </form>
+    <div id="done" class="keybox" hidden>
+      <p><strong>Your API key.</strong> It is shown only once, so copy it now.</p>
+      <div class="keyrow"><code id="keyval"></code><button class="btn small" type="button" id="copy">Copy</button></div>
+      <ol class="next">
+        <li><a id="tglink" href="#" target="_blank" rel="noopener">Connect Telegram</a> to approve actions from your phone.</li>
+        <li>Add it to your agent with the MCP or SDK snippet above, using this key.</li>
+        <li>Watch decisions on your <a href="/app">dashboard</a>.</li>
+      </ol>
+    </div>
     <p id="msg" role="status"></p>
   </section>
   </main>
@@ -211,16 +227,32 @@ await refund({ amount: 900, customer: "cus_123" });
   btns.forEach(function(b){b.addEventListener("click",function(){show(+b.dataset.k)})});
 
   var f=document.getElementById("wait"),msg=document.getElementById("msg");
+  document.getElementById("copy").addEventListener("click",function(){
+    var v=document.getElementById("keyval").textContent,b=this;
+    (navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){b.textContent="Copied"},function(){b.textContent="Select and copy"});
+  });
   f.addEventListener("submit",function(e){
     e.preventDefault();
     var email=f.email.value.trim();
     if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){msg.className="err";msg.textContent="Enter a valid email address, like you@company.com.";f.email.focus();return}
     msg.className="";msg.textContent="Sending…";
-    fetch("/waitlist",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:email,website:f.website.value})})
-      .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})})
+    fetch("/v1/signup",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email:email,website:f.website.value})})
+      .then(function(r){return r.json().catch(function(){return{}}).then(function(j){return{ok:r.ok,j:j}})})
       .then(function(x){
-        if(x.ok){msg.className="ok";msg.textContent="Request received. Your key will arrive at "+email+".";f.reset()}
-        else{msg.className="err";msg.textContent=x.j.error==="invalid_email"?"Enter a valid email address, like you@company.com.":"The request did not go through. Try again in a minute."}
+        if(x.ok&&x.j.api_key){
+          msg.className="";msg.textContent="";f.hidden=true;
+          document.getElementById("keyval").textContent=x.j.api_key;
+          var tl=document.getElementById("tglink");
+          if(x.j.telegram_link){tl.href=x.j.telegram_link}else{tl.parentNode.textContent="Connect Telegram later from your dashboard to approve actions from your phone."}
+          document.getElementById("done").hidden=false;
+          try{sessionStorage.setItem("checkpoint_key",x.j.api_key)}catch(e){}
+          return;
+        }
+        var e=x.j.error;msg.className="err";
+        msg.textContent=e==="invalid_email"?"Enter a valid email address, like you@company.com."
+          :e==="email_taken"?"This email already has a key. Open the dashboard with it, or use another email."
+          :e==="too_many_signups"?"Too many signups from this network today. Try again tomorrow."
+          :"The request did not go through. Try again in a minute.";
       })
       .catch(function(){msg.className="err";msg.textContent="No connection. Check your network and try again."});
   });

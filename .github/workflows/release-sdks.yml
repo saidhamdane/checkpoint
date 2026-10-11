@@ -1,0 +1,55 @@
+name: Publish SDKs
+
+# Push a tag like "sdk-v0.2.0" to publish both SDKs.
+# Needs repository secrets NPM_TOKEN and/or PYPI_API_TOKEN; a missing token skips that registry.
+on:
+  push:
+    tags: ["sdk-v*"]
+  workflow_dispatch:
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sdk-ts
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - name: Publish to npm
+        if: env.NODE_AUTH_TOKEN != ''
+        run: npm publish --access public
+      - name: Skip notice
+        if: env.NODE_AUTH_TOKEN == ''
+        run: echo "::warning::NPM_TOKEN not set, skipped npm publish"
+
+  pypi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sdk-python
+    env:
+      TWINE_USERNAME: __token__
+      TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build twine
+      - run: python -m build
+      - name: Publish to PyPI
+        if: env.TWINE_PASSWORD != ''
+        run: python -m twine upload dist/*
+      - name: Skip notice
+        if: env.TWINE_PASSWORD == ''
+        run: echo "::warning::PYPI_API_TOKEN not set, skipped PyPI publish"

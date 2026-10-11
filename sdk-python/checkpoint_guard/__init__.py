@@ -82,14 +82,18 @@ class Checkpoint:
             return json.loads(r.read().decode())
 
     def check(self, tool: str, input: Any = None, description: Optional[str] = None,
-              context: Optional[str] = None) -> dict:
-        """Ask Checkpoint about one action. Does not wait for human approval."""
+              context: Optional[str] = None, dry_run: bool = False) -> dict:
+        """Ask Checkpoint about one action. Does not wait for human approval.
+
+        dry_run=True computes and logs the decision without sending an approval request.
+        """
         body = {
             "action": {"tool": tool, "input": input, "description": description},
             "context": context,
             "agent_id": self.agent_id,
             "policies": self.policies,
             "thresholds": self.thresholds,
+            "dry_run": True if dry_run else None,
         }
         return self._request("POST", "/v1/check", {k: v for k, v in body.items() if v is not None})
 

@@ -3,6 +3,7 @@
 // Auth: the same Bearer API key as the REST API.
 
 import type { CheckRequest } from "./decide";
+import type { Principal } from "./auth";
 import { Env, authenticate, getApprovalStatus, runCheck } from "./index";
 
 const SUPPORTED_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"];
@@ -78,8 +79,8 @@ export async function handleMcp(req: Request, env: Env, ctx: ExecutionContext): 
     return new Response(null, { status: 405, headers: { allow: "POST" } });
   }
 
-  const keyId = await authenticate(req, env);
-  if (!keyId) {
+  const pr = await authenticate(req, env);
+  if (!pr) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { "content-type": "application/json", "www-authenticate": 'Bearer realm="checkpoint"' },
@@ -102,7 +103,7 @@ export async function handleMcp(req: Request, env: Env, ctx: ExecutionContext): 
 
   const replies: unknown[] = [];
   for (const m of messages) {
-    const r = await dispatch(m, env, ctx, keyId);
+    const r = await dispatch(m, env, ctx, pr);
     if (r !== null) replies.push(r);
   }
 
@@ -111,7 +112,7 @@ export async function handleMcp(req: Request, env: Env, ctx: ExecutionContext): 
   return rpcJson(batch ? replies : replies[0]);
 }
 
-async function dispatch(m: Rpc, env: Env, ctx: ExecutionContext, keyId: string): Promise<unknown | null> {
+async function dispatch(m: Rpc, env: Env, ctx: ExecutionContext, pr: Principal): Promise<unknown | null> {
   if (!m || typeof m !== "object" || m.jsonrpc !== "2.0") return errorObj(m?.id ?? null, -32600, "Invalid Request");
   const isNotification = m.id === undefined;
   if (!m.method) return null; // a response from the client; nothing to do
@@ -133,13 +134,13 @@ async function dispatch(m: Rpc, env: Env, ctx: ExecutionContext, keyId: string):
     case "tools/list":
       return result(m.id, { tools: TOOLS });
     case "tools/call":
-      return result(m.id, await callTool(m.params, env, ctx, keyId));
+      return result(m.id, await callTool(m.params, env, ctx, pr));
     default:
       return errorObj(m.id, -32601, `Method not found: ${m.method}`);
   }
 }
 
-async function callTool(params: any, env: Env, ctx: ExecutionContext, keyId: string) {
+async function callTool(params: any, env: Env, ctx: ExecutionContext, pr: Principal) {
   const name = params?.name;
   const args = params?.arguments ?? {};
 
@@ -152,8 +153,12 @@ async function callTool(params: any, env: Env, ctx: ExecutionContext, keyId: str
       agent_id: typeof args.agent_id === "string" ? args.agent_id : "mcp",
       policies: Array.isArray(args.policies) ? args.policies : undefined,
     };
-    const out = await runCheck(env, ctx, keyId, body);
-    if (out.status !== 200) return toolError(String(out.body.error ?? "check failed"));
+    const out = await runCheck(env, ctx, pr, body);
+    if (out.status !== 200)
+      return toolError(
+        `Checkpoint could not approve this action (${String(out.body.error ?? "check failed")}). Do NOT perform it. ` +
+          String(out.body.message ?? ""),
+      );
     const r = out.body as Record<string, any>;
     const instruction =
       r.decision === "allow"
@@ -172,7 +177,7 @@ async function callTool(params: any, env: Env, ctx: ExecutionContext, keyId: str
   if (name === "checkpoint_approval_status") {
     if (typeof args.approval_id !== "string" || !/^[A-Za-z0-9-]{8,64}$/.test(args.approval_id))
       return toolError("valid 'approval_id' is required");
-    const st = await getApprovalStatus(env, keyId, args.approval_id);
+    const st = await getApprovalStatus(env, pr, args.approval_id);
     if (!st) return toolError("approval not found");
     const s = st.status;
     const instruction =

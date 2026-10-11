@@ -1,10 +1,26 @@
 [project]
 name = "checkpoint-guard"
-version = "0.1.0"
-description = "Pre-action guard for AI agents: allow, block or ask a human before any tool call."
+version = "0.2.0"
+description = "Safety gate for AI agents: allow, block, or ask a human before any risky tool call."
+readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
+keywords = ["ai-agents", "guardrails", "mcp", "llm", "safety", "human-in-the-loop"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://checkpoint.saidmatorral.workers.dev"
+Source = "https://github.com/saidhamdane/checkpoint"
+Issues = "https://github.com/saidhamdane/checkpoint/issues"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["checkpoint_guard"]

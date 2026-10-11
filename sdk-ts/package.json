@@ -1,12 +1,26 @@
 {
-  "name": "@checkpoint-ai/sdk",
-  "version": "0.1.0",
-  "description": "Pre-action guard for AI agents: allow, block or ask a human before any tool call.",
+  "name": "checkpoint-guard",
+  "version": "0.2.0",
+  "description": "Safety gate for AI agents: allow, block, or ask a human before any risky tool call.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
-  "scripts": { "build": "tsc" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["ai-agents", "guardrails", "mcp", "llm", "safety", "human-in-the-loop", "approval"],
+  "homepage": "https://checkpoint.saidmatorral.workers.dev",
+  "repository": { "type": "git", "url": "git+https://github.com/saidhamdane/checkpoint.git", "directory": "sdk-ts" },
+  "bugs": "https://github.com/saidhamdane/checkpoint/issues",
   "license": "MIT",
+  "engines": { "node": ">=18" },
   "devDependencies": { "typescript": "^5.6.0" }
 }

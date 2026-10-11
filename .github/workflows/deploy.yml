@@ -76,6 +76,10 @@ jobs:
       - name: Deploy
         run: npx wrangler deploy
 
+      - name: Register Telegram webhook (linking + approvals)
+        run: |
+          curl -s -X POST https://checkpoint.saidmatorral.workers.dev/telegram/setup
+
       - name: Smoke test
         run: |
           sleep 5
