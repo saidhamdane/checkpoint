@@ -484,7 +484,7 @@ async function handleRotate(env: Env, pr: Principal): Promise<Response> {
 
 function html(body: string): Response {
   return new Response(body, {
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300", ...SECURITY_HEADERS },
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", ...SECURITY_HEADERS },
   });
 }
 
